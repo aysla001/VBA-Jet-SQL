@@ -1,0 +1,101 @@
+' VBA Function to generate json containg nodes of personal Evernote data
+' Queries against access database of export of Evernote data
+
+Sub CreateNodes()
+' build json
+Dim rsNode As DAO.Recordset, sqlNode As String, numNodes As Double
+Dim rsAdjacences As DAO.Recordset, sqlAdjacences As String
+Dim rsFindType As DAO.Recordset, sqlFindType As String, NodeType As String, source As String
+Dim rsFindRelType As DAO.Recordset, sqlFindRelType As String, N1Type As String, N2Type As String
+Dim rsPrintTypeInfo As DAO.Recordset, sqlPrintTypeInfo As String
+Dim rsPrintRelType As DAO.Recordset, sqlPrintRelType As String
+Dim types As DAO.Recordset, sqlType As String, elementname As String, sourceid As String, typeID As String, catAE As String ' categorization field form All Entitites
+Dim tablesource As String, currentTableSource As String
+Dim tabs As String
+tabs = "    "
+Dim path As String, tbl As TableDef, dbpath As String
+
+Dim match As String, Note As String, Tags As String, NoteId As String
+Set db = CurrentDb()
+dbpath = Application.CurrentProject.path
+path = dbpath & "\Webernote.json"
+Open path For Output Access Write As #1
+
+'print node data header
+Print #1, "{"
+Print #1, "  ""nodes""" & ": ["
+'Print #1, tabs & "  " & """match"": " & 0.5 & ","
+'"""match"": " & match & ","
+
+
+sqlNode = "SELECT [_Notebooks].* FROM _Notebooks ORDER BY [_Notebooks].[parent_id];"
+
+'print notebook nodes
+Set rsNode = CurrentDb.OpenRecordset(sqlNode)
+    If Not rsNode.EOF Then
+    rsNode.MoveFirst
+        Do          
+            match = Nz(rsNode.Fields("match"), "NULL")
+            Note = Nz(rsNode.Fields("Note"), "NULL")
+            Tags = Nz(rsNode.Fields("Tags"), "NULL")
+            NoteId = Nz(rsNode.Fields("NoteID"), "NULL")
+            Print #1, tabs & "{"
+            'Print #1, tabs & tabs & "<n nm=""" & elementname & """ d=""" & elementDesc & """ neID=""" & sourceid & """ nId=""" & rsNode.Fields("DatabaseId") & """ acr=""" & elementAcronym & """" & " tId= """ & typeID & """" & "/>"
+             Print #1, tabs & "  " & """NoteName"": " & """" & Note & """" & ", "
+             Print #1, tabs & "  " & """NoteTag"": " & """" & Tags & """" & ","
+             Print #1, tabs & "  " & """NoteId"": " & """" & NoteId & """" & ","
+			 Print #1, tabs & "  " & """NoteRelationship"": " & 0.5 & ","
+             Print #1, tabs & "  " & """NoteURL"": " & "1"
+             'Print #1, tabs & tabs & "},"
+            rsNode.MoveNext
+            If rsNode.EOF Then
+                Print #1, tabs & "}"
+            Else
+                Print #1, tabs & "},"
+            End If
+        
+        Loop Until rsNode.EOF
+
+    End If
+
+Print #1, tabs & "],"
+rsNode.Close
+
+Print #1, tabs & """links"": ["
+sqlNode = "SELECT [_Notebooks].* FROM _Notebooks ORDER BY [_Notebooks].[parent_id];"
+
+'print adjacencies
+Set rsNode = CurrentDb.OpenRecordset(sqlNode)
+    If Not rsNode.EOF Then
+    rsNode.MoveFirst
+        Do
+            Print #1, tabs & "{"
+            NoteId = Nz(rsNode.Fields("NoteID"), "NULL")
+            ParentId = Nz(rsNode.Fields("parent_id"), "NULL")
+            'Print #1, tabs & tabs & "<n nm=""" & elementname & """ d=""" & elementDesc & """ neID=""" & sourceid & """ nId=""" & rsNode.Fields("DatabaseId") & """ acr=""" & elementAcronym & """" & " tId= """ & typeID & """" & "/>"
+             Print #1, tabs & "  " & """source"": " & """" & NoteId & """" & ","
+             Print #1, tabs & "  " & """target"": " & """" & ParentId & """"
+             
+            rsNode.MoveNext
+            
+            If rsNode.EOF Then
+                Print #1, tabs & "}"
+            Else
+                Print #1, tabs & "},"
+            End If
+
+        Loop Until rsNode.EOF
+
+    End If
+
+Print #1, "  ]"
+Print #1, "}"
+
+Print #1, tabs & "</adj>"
+
+
+DoCmd.SetWarnings (True)
+
+'Print #1, "}"
+Close #1
+End Sub
